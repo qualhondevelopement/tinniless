@@ -4,6 +4,13 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser, PermissionsMixin
 
 class Business(models.Model):
+    CLINIC = "CLINIC"
+    RESELLER = "RESELLER"
+    BUSINESS_TYPE_CHOICES = [
+        (CLINIC,CLINIC),
+        (RESELLER,"RESELLER")
+    ]
+    business_type = models.CharField(max_length= 25, choices= BUSINESS_TYPE_CHOICES, default= CLINIC)
     organization_name = models.CharField(max_length=50)
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -24,11 +31,13 @@ class UserAccount(AbstractUser):
     ADMIN = "ADMIN"
     PATIENT = "PATIENT"
     OPERATOR = "OPERATOR"
+    RESELLER = "RESELLER"
     
     USER_TYPE_CHOICES = [
         (ADMIN,"ADMIN"),
         (PATIENT, "PATIENT"),
-        (OPERATOR, "OPERATOR")
+        (OPERATOR, "OPERATOR"),
+        (RESELLER,"RESELLER")
     ]
 
     user_type = models.CharField(max_length=25, choices= USER_TYPE_CHOICES, default = PATIENT)

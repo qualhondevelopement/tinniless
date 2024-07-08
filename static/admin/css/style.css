@@ -1,0 +1,15 @@
+.elevation-3 {
+    box-shadow: none !important; /* Remove elevation effect */
+    margin-top: 1px !important;
+    margin-right: 25px !important;
+    font-family: 'Montserrat', sans-serif;
+}
+.brand-text{
+    color:  #23a098;
+    font-weight:  bolder !important;
+    font-size: x-large;
+}
+.nav-link{
+    font-weight:  bolder;
+
+}
