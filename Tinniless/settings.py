@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
+    'core_utils',
     'users',
     'orders'
 ]
@@ -144,7 +146,15 @@ JAZZMIN_SETTINGS["site_icon"] = f"admin/logo-icon.png"
 
 
 #rest framework settings
+
+
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
 }
+
+
+COUNTRY_JSON = os.path.join(BASE_DIR,"core_utils/train-v2.0.json")
