@@ -166,3 +166,12 @@ class CardDetails(models.Model):
     bank_name = models.CharField(max_length=100)
     user = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     is_deleted = models.BooleanField(default=False)
+    
+    
+    
+class UserLoginSession(models.Model):
+    user = models.ForeignKey(UserAccount, on_delete= models.CASCADE, related_name= "user_sessions")
+    ip = models.CharField(max_length=100)
+    login_date_time = models.DateTimeField(auto_now_add=True)
+    logout_date_time = models.DateTimeField(blank= True, null= True)
+    jwt_token = models.CharField(max_length=200)

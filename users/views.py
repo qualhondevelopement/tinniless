@@ -5,11 +5,150 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.encoding import force_bytes,force_str
+from django.urls import reverse
+from django.core.mail import send_mail
+from django.views.decorators.csrf import csrf_exempt
+from .utils import *
 # Create your views here.
+
+class LoginAPI(APIView):
+    def get_user(self, email):
+        try:
+            return UserAccount.objects.get(email=email,is_archived = False)
+        except UserAccount.DoesNotExist:
+            return None
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email', None)
+        password = request.data.get('password', None)
+        if email is None or password is None:
+            return Response(
+                {'error': 'Please provide both email and password'},
+                status = 400
+            )
+
+        user = self.get_user(email)
+
+        if user is None:
+            return Response(
+                {'error': 'Invalid email or password'},
+                status=400
+            )
+
+        if not user.check_password(password):
+            return Response(
+                {'error': 'Invalid email or password'},
+                status=400
+            )
+        
+        if user.is_archived:
+            return Response(
+                {"error":"Your Account is Archived"},
+                status=400
+            )
+            
+        if not user.is_active:
+            return Response(
+                {"error":"Your Account is not active"},
+                status=400
+            )
+            
+        ip =  get_client_ip(request=request)
+        if not ip:
+            return Response(
+                {"error":"Failed to get the IP address"},
+                status=400
+            )
+        
+        if user.user_type == UserAccount.ADMIN:
+            old_sessions  = UserLoginSession.objects.filter(
+                ip = ip,
+                logout_date_time = None,
+                user = user
+            )
+            if old_sessions.exists():
+                old_sessions.update(logout_date_time = timezone.now())
+            
+            jwt_token = create_login_session(request,user,ip)
+        else:
+            old_sessions  = UserLoginSession.objects.filter(
+                logout_date_time = None,
+                user = user
+            )
+            if old_sessions.exists():
+                old_sessions.update(logout_date_time = timezone.now())
+            
+            jwt_token = create_login_session(request,user,ip)
+            
+        return Response(
+            {
+                "success":"User has been Logged in",
+                "token":jwt_token,
+                "user_details":UserAccountSerializer(user).data
+            },
+            200
+        )
+                             
+
+
+class PasswordResetRequestView(APIView):
+
+    def post(self, request):
+        email = request.data.get('email')
+        user = get_object_or_404(UserAccount, email=email)
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        reset_link = f"http://10.10.0.254:8003/api/users/auth/reset-password/{uid}/{token}/"
+        
+        print("\n\n",reset_link,"\n\n")
+        send_mail(
+            'Password Reset Request',
+            f'Click the link to reset your password: {reset_link}',
+            'your-email@example.com',
+            [email],
+            fail_silently=False,
+        )
+        return Response({'message': 'Password reset link sent.'})
+
+class PasswordResetConfirmView(APIView):
+    def post(self, request, uidb64, token):
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = get_object_or_404(UserAccount, pk=uid)
+        if default_token_generator.check_token(user, token):
+            new_password = request.data.get('new_password')
+            verify_new_password = request.data.get("verify_new_password")
+            if new_password != verify_new_password:
+                return Response(
+                    {
+                        'error': "The password does not match"
+                    },
+                    status=400
+                )
+            user.set_password(new_password)
+            user.save()
+            return Response({'message': 'Password has been reset.'})
+        else:
+            return Response({'message': 'Invalid token.'}, status=400)
+
 
 class AdminManagePatient(APIView):
     
+    authentication_classes = [JwtAuthentication,]
+    
     def get(self,request,format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        
         id = request.query_params.get('id')
         try:
             user_obj = UserAccount.objects.get(id= id)
@@ -44,6 +183,14 @@ class AdminManagePatient(APIView):
             
             
     def post(self,request,format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
             
         first_name = request.data.get("first_name")
         middle_name = request.data.get("middle_name")
@@ -133,6 +280,14 @@ class AdminManagePatient(APIView):
             )
     
     def patch(self, request, format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
         
         user_id = request.data.get("user_id")
         
@@ -230,6 +385,15 @@ class AdminManagePatient(APIView):
         )
         
     def delete(self, request,format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        
         id = request.data.get("user_id")
         user_obj = UserAccount.objects.get(id = id)
         user_obj.is_deleted = True
@@ -251,9 +415,21 @@ class AdminManagePatient(APIView):
             200
         )
         
-        
+
 class AdminListPatient(APIView):
+    
+    authentication_classes = [JwtAuthentication,]
+    
     def get(self, request, format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        
         users = UserAccount.objects.filter(
             user_type = UserAccount.PATIENT,
             is_archived = False,

@@ -158,3 +158,10 @@ REST_FRAMEWORK = {
 
 
 COUNTRY_JSON = os.path.join(BASE_DIR,"core_utils/train-v2.0.json")
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST_USER = "kushagr.nandan@gmail.com"
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_PASSWORD = "ampecjrbathsnfcp"
