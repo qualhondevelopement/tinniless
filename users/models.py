@@ -26,6 +26,10 @@ class Business(models.Model):
         super().save(*args, **kwargs)
 
 
+class Language(models.Model):
+    language_code = models.CharField(max_length=5)
+    language_name= models.CharField(max_length=50)
+
 class UserAccount(AbstractUser):
 
     ADMIN = "ADMIN"
@@ -40,14 +44,19 @@ class UserAccount(AbstractUser):
         (RESELLER,"RESELLER")
     ]
     
-    LANG_ENGLISH = 'EN'
-    LANG_SPANISH = 'ES'
-    
-    LANGUAGE_CHOICES = [
-        (LANG_ENGLISH, 'English'),
-        (LANG_SPANISH, 'Spanish'),
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    BLOCKED = "BLOCKED"
+    PENDING = "PENDING"
+
+    USER_STATUS_CHOICES = [
+        (ACTIVE,ACTIVE),
+        (INACTIVE,INACTIVE),
+        (BLOCKED,BLOCKED),
+        (PENDING,PENDING)
     ]
 
+    status = models.CharField(max_length= 50,choices=USER_STATUS_CHOICES,default=ACTIVE)
     user_type = models.CharField(max_length=25, choices= USER_TYPE_CHOICES, default = PATIENT)
     full_name = models.CharField(max_length=90)
     middle_name = models.CharField(max_length = 25,default = "", blank = True)
@@ -62,12 +71,8 @@ class UserAccount(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
     search_string = models.TextField(blank=True, null=True)
     preferred_time_zone = models.CharField(max_length = 25, default = "CDT")
-    preferred_language = models.CharField(
-        max_length=10,
-        choices=LANGUAGE_CHOICES,
-        default=LANG_ENGLISH,
-    )
-    
+    preferred_language = models.ForeignKey(Language,null = True, blank = True, on_delete= models.SET_NULL, related_name="preferred_users")
+    added_by = models.ForeignKey('self',blank = True, null = True, related_name="added_users",on_delete= models.SET_NULL)    
 
     def save(self, *args, **kwargs):
 
@@ -146,7 +151,7 @@ class Address(models.Model):
     state = models.CharField(max_length=50)
     region = models.IntegerField(null=True, blank=True)
     country = models.CharField(max_length=50)
-    postal_code = models.IntegerField(unique=True)
+    postal_code = models.CharField(max_length=10)
     is_deleted = models.BooleanField(default=False)
 
 

@@ -34,5 +34,6 @@ admin.site.register(ContactNumber)
 admin.site.register(MedicalRecord)
 admin.site.register(Address)
 admin.site.register(CardDetails)
+admin.site.register(Language)
 # admin.site
 # admin.site.register(CardDetails)

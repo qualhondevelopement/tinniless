@@ -5,5 +5,6 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('get-location-data/',GetLocation.as_view(), name = "get_location_data"),
-    path('get-tinnitus-types/',GetAllTinitusTypes.as_view(), name = "get_all_tinnitus_types")
+    path('get-tinnitus-types/',GetAllTinitusTypes.as_view(), name = "get_all_tinnitus_types"),
+    path('get-lang-list/',GetAllLanguage.as_view(),name = "get_all_lang")
 ]

@@ -12,6 +12,7 @@ from django.utils.encoding import force_bytes,force_str
 from django.urls import reverse
 from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework.authtoken.models import Token
 from .utils import *
 # Create your views here.
 
@@ -93,7 +94,18 @@ class LoginAPI(APIView):
             200
         )
                              
+class LogoutAPIView(APIView):
+    def get(self, request, format=None):
+        try:
+            token= request.GET.get('token')
+            from .utils import update_logout_session
+            is_successful,message,code = update_logout_session(token)
+            if is_successful == False:
+                return Response({"error":message},code)
 
+            return Response({'success': 'Logged out successfully.'})
+        except Token.DoesNotExist:
+            return Response({'error': 'Invalid token.'}, status=403)
 
 class PasswordResetRequestView(APIView):
 
@@ -213,9 +225,35 @@ class AdminManagePatient(APIView):
         city = request.data.get("city")
         post_code = request.data.get("post_code")
         
+        if len(post_code)<3 or len(post_code)>9:
+            return Response(
+                {
+                    "  error":"Postal code length is invalid"
+                },
+                400
+            )
+        
+        date_object = datetime.strptime(dob, "%Y-%m-%d")
+        if date_object> datetime.now():
+            return Response(
+                {
+                    'error':"Date of Birth can not be in future"
+                },
+                400
+            )
+        if int(age)<0:
+            return Response(
+                {
+                    "error":"Age can not be negative"
+                },
+                400
+            )
         
         try:
             with transaction.atomic():
+                
+                
+                lang_obj = Language.objects.get(language_name = lang)
                 user_obj = UserAccount.objects.create(
                     user_type = UserAccount.PATIENT,
                     first_name = first_name,
@@ -224,14 +262,17 @@ class AdminManagePatient(APIView):
                     email = email,
                     dob = dob,
                     age = age,
-                    preferred_language = lang
+                    preferred_language = lang_obj,
+                    added_by = user
                 )
                 print(phone_number)
                 contact_obj = ContactNumber.objects.create(
                     user = user_obj,
-                    country_code = phone_number["country_code"],
-                    number = phone_number["number"]
+                    country_code = phone_number["country_code"].replace('+',''),
+                    number = int(phone_number["number"])
                 )
+                if tinnitus_start_date == "":
+                    tinnitus_start_date = None
                 mediacal_record_obj = MedicalRecord.objects.create(
                     tinnitus_start_date = tinnitus_start_date,
                     ears = ears,
@@ -253,13 +294,18 @@ class AdminManagePatient(APIView):
                     city = city,
                     postal_code = post_code
                 )
+                add_objs = Address.objects.filter(
+                    user = user_obj,
+                )
+                lang_serializer = LanguageSerializer(lang_obj)
                 user_serializer = UserAccountSerializer(user_obj)
                 contact_serializer = ContactNumberSerializer(contact_obj)
                 medical_record_serializer = MedicalRecordSerializer(mediacal_record_obj)
                 treatment_serializer = UserTreatmentMappingSerializer(treatments,many = True)
-                address_serializer = AddressSerializer(add_obj)
+                address_serializer = AddressSerializer(add_objs,many = True)
                 resp_data = {
                     "user":user_serializer.data,
+                    "language":lang_serializer.data,
                     "contact":contact_serializer.data,
                     "medical_record":medical_record_serializer.data,
                     "treatment":treatment_serializer.data,
@@ -298,7 +344,7 @@ class AdminManagePatient(APIView):
         email = request.data.get("email",None)
         dob = request.data.get("dob",None)
         age = request.data.get("age",None)
-        lang=  request.data.get("lang",None) 
+        lang=  request.data.get("lang",None)
         
         tinnitus_start_date = request.data.get("tinnitus_start_date",None)
         ears = request.data.get("ears",None)
@@ -321,6 +367,15 @@ class AdminManagePatient(APIView):
                 },
                 400
             )
+        try:
+            lang_obj = Language.objects.get(language_name = lang)
+        except:
+            return Response(
+                {
+                    "error":"Langiage with given code does not exist",
+                },
+                400
+            )
             
         if first_name:
             user_obj.first_name = first_name
@@ -335,18 +390,18 @@ class AdminManagePatient(APIView):
         if age:
             user_obj.age = age
         if lang:
-            user_obj.preferred_language = lang
+            user_obj.preferred_language = lang_obj
         user_obj.save()
         
         if phone_number:
             contact_obj = ContactNumber.objects.filter(user = user_obj).first()
-            contact_obj.country_code = phone_number.country_code
-            contact_obj.number = phone_number.number
+            contact_obj.country_code = phone_number["country_code"].replace("+",'')
+            contact_obj.number = int(phone_number["number"])
             contact_obj.save()
           
           
         medical_obj = MedicalRecord.objects.get(patient = user_obj)  
-        if tinnitus_start_date: 
+        if tinnitus_start_date != None or tinnitus_start_date != '':
             medical_obj.tinnitus_start_date = tinnitus_start_date
         if ears:
             medical_obj.ears = ears
@@ -434,7 +489,7 @@ class AdminListPatient(APIView):
             user_type = UserAccount.PATIENT,
             is_archived = False,
             is_deleted = False
-        ).order_by("created_at")
+        ).order_by("-created_at")
         resp_data= []
         for u in users:
             resp_data.append(patient_group_serializer_func(u))
@@ -447,4 +502,54 @@ class AdminListPatient(APIView):
         )
         
 
-
+class GetuserDetail(APIView):
+    authentication_classes = (JwtAuthentication,)
+    def get(self,request,format = None):
+        user = request.user
+        print("herer")
+        
+        serializer = UserAccountSerializer(user)
+        print(serializer.data)
+        return Response(
+                {
+                    "success":'User is Logged in',
+                    "data":serializer.data
+                },
+                200
+            )
+        
+import json
+class IsExisting(APIView):
+    # authentication_classes = (JwtAuthentication,)
+    def get(self,request, format = None):
+        email = request.query_params.get("email")
+        if email:
+            if UserAccount.objects.filter(email = email).exists():
+                return Response(
+                    {
+                        "error":"Email Already Exists",
+                        "success":False
+                    },
+                    400
+                )
+        phone = request.query_params.get("phone")
+        
+        if phone:
+        
+            phone = json.loads(phone)
+            print(phone)
+            if ContactNumber.objects.filter(country_code = phone["country_code"].replace("+",'').replace(" ",''), number = int(phone["number"])).exists():
+                return Response(
+                    {
+                        "error":"Phone number already exists"
+                    },
+                    400
+                )
+        return Response(
+            {
+                "message":"credentials can be used",
+                "success":True
+            },
+            200
+        )
+        

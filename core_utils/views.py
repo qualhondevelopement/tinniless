@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from django.conf import settings
 import json
 from .utils import *
+from users.serializers import *
 # Create your views here.
 
 
@@ -18,6 +19,7 @@ class GetLocation(APIView):
         json_path = settings.COUNTRY_JSON
         with open(json_path, 'r', encoding='utf-8') as file:
             country_json =  json.load(file)
+        resp_dict = {}
         if not country:
             resp_dict = {
                 "countries":[c['name'] for c in country_json]
@@ -46,6 +48,19 @@ class GetAllTinitusTypes(APIView):
         return Response(
             {
                 "data":return_all_tinnitus_types()
+            },
+            200
+        )
+        
+        
+class GetAllLanguage(APIView):
+    def get(self,request,format = None):
+        langs = Language.objects.all()
+        lang_serializer = LanguageSerializer(langs,many = True)
+        return Response(
+            {
+                "success":"Data Fetched",
+                "data":lang_serializer.data
             },
             200
         )

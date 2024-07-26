@@ -9,10 +9,14 @@ class BusinessSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class UserAccountSerializer(serializers.ModelSerializer):
+    added_by = serializers.SerializerMethodField()
     class Meta:
         model = UserAccount
-        fields = ['id','username','first_name','middle_name','last_name','email','user_type','full_name',
-                  'dob','age','preferred_time_zone','preferred_language']
+        fields = ['id','username','first_name','middle_name','last_name','email','user_type','full_name','status',
+                  'dob','age','preferred_time_zone','preferred_language','added_by']
+        
+    def get_added_by(self,obj):
+        return obj.added_by.first_name if obj.added_by else None
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,9 +24,13 @@ class AddressSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ContactNumberSerializer(serializers.ModelSerializer):
+    country_code = added_by = serializers.SerializerMethodField()
     class Meta:
         model = ContactNumber
         fields = '__all__'
+        
+    def get_country_code(self,obj):
+        return "+" + str(obj.country_code)
 
 class CardDetailsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,6 +47,10 @@ class UserTreatmentMappingSerializer(serializers.ModelSerializer):
         model = UserTreatmentMapping
         fields = ('treatment_type','user')
 
+class LanguageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Language
+        fields = '__all__'
 
 # class PatientSerializer(serializers.Serializer):
 #     first_name = serializers.CharField()
@@ -101,6 +113,7 @@ class UserTreatmentMappingSerializer(serializers.ModelSerializer):
 
 def patient_group_serializer_func(user_obj):
     # user_obj = UserAccount.objects.get(id= id)
+    lang_obj = user_obj.preferred_language
     contact_obj = ContactNumber.objects.get(user = user_obj,is_deleted = False)
     medical_record_obj = MedicalRecord.objects.get(patient = user_obj,is_deleted = False)
     add_obj = Address.objects.filter(user = user_obj,is_deleted = False)
@@ -111,8 +124,10 @@ def patient_group_serializer_func(user_obj):
     medical_record_serializer = MedicalRecordSerializer(medical_record_obj)
     treatment_serializer = UserTreatmentMappingSerializer(treatments,many = True)
     address_serializer = AddressSerializer(add_obj,many = True)
+    lang_serializer = LanguageSerializer(lang_obj)
     data = {
         "user":user_serializer.data,
+        "language":lang_serializer.data,
         "contact":contact_serializer.data,
         "medical_record":medical_record_serializer.data,
         "treatment":treatment_serializer.data,
