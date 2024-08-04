@@ -10,13 +10,17 @@ class BusinessSerializer(serializers.ModelSerializer):
 
 class UserAccountSerializer(serializers.ModelSerializer):
     added_by = serializers.SerializerMethodField()
+    price_per_unit = serializers.SerializerMethodField()
     class Meta:
         model = UserAccount
-        fields = ['id','username','first_name','middle_name','last_name','email','user_type','full_name','status',
-                  'dob','age','preferred_time_zone','preferred_language','added_by']
+        fields = ['id','username','profile_image','prefix','first_name','middle_name','last_name','email','user_type','full_name','status',
+                  'gender','dob','age','preferred_time_zone','added_by','price_per_unit']
         
     def get_added_by(self,obj):
         return obj.added_by.first_name if obj.added_by else None
+    
+    def get_price_per_unit(self,obj):
+        return f"{obj.price_per_unit:05.2f}"
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,7 +28,7 @@ class AddressSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ContactNumberSerializer(serializers.ModelSerializer):
-    country_code = added_by = serializers.SerializerMethodField()
+    country_code = serializers.SerializerMethodField()
     class Meta:
         model = ContactNumber
         fields = '__all__'
@@ -48,9 +52,16 @@ class UserTreatmentMappingSerializer(serializers.ModelSerializer):
         fields = ('treatment_type','user')
 
 class LanguageSerializer(serializers.ModelSerializer):
+    value = serializers.SerializerMethodField()
+    label = serializers.SerializerMethodField()
     class Meta:
         model = Language
         fields = '__all__'
+        
+    def get_value(self,obj):
+        return obj.language_name
+    def get_label(self,obj):
+        return obj.language_name
 
 # class PatientSerializer(serializers.Serializer):
 #     first_name = serializers.CharField()
@@ -113,7 +124,6 @@ class LanguageSerializer(serializers.ModelSerializer):
 
 def patient_group_serializer_func(user_obj):
     # user_obj = UserAccount.objects.get(id= id)
-    lang_obj = user_obj.preferred_language
     contact_obj = ContactNumber.objects.get(user = user_obj,is_deleted = False)
     medical_record_obj = MedicalRecord.objects.get(patient = user_obj,is_deleted = False)
     add_obj = Address.objects.filter(user = user_obj,is_deleted = False)
@@ -124,13 +134,38 @@ def patient_group_serializer_func(user_obj):
     medical_record_serializer = MedicalRecordSerializer(medical_record_obj)
     treatment_serializer = UserTreatmentMappingSerializer(treatments,many = True)
     address_serializer = AddressSerializer(add_obj,many = True)
-    lang_serializer = LanguageSerializer(lang_obj)
+    mappings = UserLaguageMapping.objects.filter(user = user_obj)
+    lang_objs = [i.language for i in mappings]
+    language_serializer  = LanguageSerializer(lang_objs,many = True)
     data = {
         "user":user_serializer.data,
-        "language":lang_serializer.data,
+        "language":language_serializer.data,
         "contact":contact_serializer.data,
         "medical_record":medical_record_serializer.data,
         "treatment":treatment_serializer.data,
+        "address":address_serializer.data
+    }
+    return data
+
+def operator_group_serializer_func(user_obj):
+    # user_obj = UserAccount.objects.get(id= id)
+    business_obj = user_obj.business
+    mappings = UserLaguageMapping.objects.filter(user = user_obj)
+    lang_objs = [i.language for i in mappings]
+    
+    contact_obj = ContactNumber.objects.get(business = business_obj,is_deleted = False)
+    add_obj = Address.objects.filter(business = business_obj,is_deleted = False)
+    
+    business_serializer =BusinessSerializer(business_obj)
+    user_serializer = UserAccountSerializer(user_obj)
+    contact_serializer = ContactNumberSerializer(contact_obj)
+    address_serializer = AddressSerializer(add_obj,many = True)
+    language_serializer  = LanguageSerializer(lang_objs,many = True)
+    data = {
+        "user":user_serializer.data,
+        "business":business_serializer.data,
+        "language":language_serializer.data,
+        "contact":contact_serializer.data,
         "address":address_serializer.data
     }
     return data

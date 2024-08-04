@@ -14,7 +14,8 @@ from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authtoken.models import Token
 from .utils import *
-# Create your views here.
+import json
+#=======================================================================================================================
 
 class LoginAPI(APIView):
     def get_user(self, email):
@@ -146,6 +147,7 @@ class PasswordResetConfirmView(APIView):
         else:
             return Response({'message': 'Invalid token.'}, status=400)
 
+#=======================================================================================================================
 
 class AdminManagePatient(APIView):
     
@@ -175,15 +177,19 @@ class AdminManagePatient(APIView):
         medical_record_obj = MedicalRecord.objects.get(patient = user_obj)
         add_obj = Address.objects.filter(user = user_obj)
         treatments = UserTreatmentMapping.objects.filter(user = user_obj)
+        mappings = UserLaguageMapping.objects.filter(user = user_obj)
+        lang_objs = [i.language for i in mappings]
             
         user_serializer = UserAccountSerializer(user_obj)
         contact_serializer = ContactNumberSerializer(contact_obj)
         medical_record_serializer = MedicalRecordSerializer(medical_record_obj)
         treatment_serializer = UserTreatmentMappingSerializer(treatments,many = True)
         address_serializer = AddressSerializer(add_obj,many = True)
+        language_serializer  = LanguageSerializer(lang_objs,many = True)
         resp_data = {
             "user":user_serializer.data,
             "contact":contact_serializer.data,
+            "language_serializer":language_serializer.data,
             "medical_record":medical_record_serializer.data,
             "treatment":treatment_serializer.data,
             "address":address_serializer.data
@@ -209,6 +215,7 @@ class AdminManagePatient(APIView):
         last_name = request.data.get("last_name")
         phone_number = request.data.get("phone_number")
         email = request.data.get("email")
+        gender = request.data.get("gender")
         dob = request.data.get("dob")
         age = request.data.get("age")
         lang=  request.data.get("lang") 
@@ -260,12 +267,12 @@ class AdminManagePatient(APIView):
                     middle_name = middle_name,
                     last_name = last_name,
                     email = email,
+                    gender = gender,
                     dob = dob,
                     age = age,
-                    preferred_language = lang_obj,
                     added_by = user
                 )
-                print(phone_number)
+                mapp = UserLaguageMapping.objects.create(user = user_obj, language = lang_obj)
                 contact_obj = ContactNumber.objects.create(
                     user = user_obj,
                     country_code = phone_number["country_code"].replace('+',''),
@@ -309,7 +316,7 @@ class AdminManagePatient(APIView):
                     "contact":contact_serializer.data,
                     "medical_record":medical_record_serializer.data,
                     "treatment":treatment_serializer.data,
-                    "address":address_serializer.data
+                "address":address_serializer.data
                 }
                 return Response(
                     resp_data,
@@ -345,7 +352,8 @@ class AdminManagePatient(APIView):
         dob = request.data.get("dob",None)
         age = request.data.get("age",None)
         lang=  request.data.get("lang",None)
-        
+        status = request.data.get("status", None)
+         
         tinnitus_start_date = request.data.get("tinnitus_start_date",None)
         ears = request.data.get("ears",None)
         tinnitus_type = request.data.get("tinnitus_type",None)
@@ -367,16 +375,17 @@ class AdminManagePatient(APIView):
                 },
                 400
             )
-        try:
-            lang_obj = Language.objects.get(language_name = lang)
-        except:
-            return Response(
-                {
-                    "error":"Langiage with given code does not exist",
-                },
-                400
-            )
-            
+        if lang: 
+            try:
+                lang_obj = Language.objects.get(language_name = lang)
+            except:
+                return Response(
+                    {
+                        "error":"Language with given code does not exist",
+                    },
+                    400
+                )
+                
         if first_name:
             user_obj.first_name = first_name
         if middle_name:
@@ -390,7 +399,14 @@ class AdminManagePatient(APIView):
         if age:
             user_obj.age = age
         if lang:
-            user_obj.preferred_language = lang_obj
+            mapping = user_obj.user_languages.all().first()
+            if mapping :
+                mapping.language = lang_obj
+            else:
+                mapping = UserLaguageMapping.objects.create(user = user_obj,language = lang_obj)
+            mapping.save()
+        if status:
+            user_obj.status = status
         user_obj.save()
         
         if phone_number:
@@ -401,8 +417,10 @@ class AdminManagePatient(APIView):
           
           
         medical_obj = MedicalRecord.objects.get(patient = user_obj)  
-        if tinnitus_start_date != None or tinnitus_start_date != '':
-            medical_obj.tinnitus_start_date = tinnitus_start_date
+        if  tinnitus_start_date != None:
+            if tinnitus_start_date == "":
+                tinnitus_start_date = None
+                medical_obj.tinnitus_start_date = tinnitus_start_date
         if ears:
             medical_obj.ears = ears
         if tinnitus_type:
@@ -501,6 +519,7 @@ class AdminListPatient(APIView):
             200
         )
         
+#=======================================================================================================================
 
 class GetuserDetail(APIView):
     authentication_classes = (JwtAuthentication,)
@@ -518,7 +537,7 @@ class GetuserDetail(APIView):
                 200
             )
         
-import json
+
 class IsExisting(APIView):
     # authentication_classes = (JwtAuthentication,)
     def get(self,request, format = None):
@@ -553,3 +572,384 @@ class IsExisting(APIView):
             200
         )
         
+        
+#=======================================================================================================================
+
+class AdminManageOperator(APIView):
+    
+    authentication_classes = [JwtAuthentication,]
+    
+    def get(self,request,format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        
+        id = request.query_params.get('id')
+        try:
+            user_obj = UserAccount.objects.get(id= id)
+        except UserAccount.DoesNotExist:
+            return Response(
+                {
+                    "error":"user with given id does not exist"
+                },
+                400
+            )
+        business_obj = user_obj.business
+        contact_obj = ContactNumber.objects.get(business = business_obj)
+        add_obj = Address.objects.filter(business = business_obj)
+        mappings = UserLaguageMapping.objects.filter(user = user_obj)
+        lang_objs = [i.language for i in mappings]
+        
+            
+        user_serializer = UserAccountSerializer(user_obj)
+        contact_serializer = ContactNumberSerializer(contact_obj)
+        address_serializer = AddressSerializer(add_obj,many = True)
+        business_serializer = BusinessSerializer(business_obj)
+        language_serializer = LanguageSerializer(lang_objs,many = True)
+        resp_data = {
+            "user":user_serializer.data,
+            "contact":contact_serializer.data,
+            "address":address_serializer.data,
+            "business":business_serializer.data,
+            "language":language_serializer.data
+        }
+        return Response(
+            resp_data,
+            200
+        )
+            
+            
+    def post(self,request,format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+            
+        prefix = request.data.get("prefix")
+        first_name = request.data.get("first_name")
+        middle_name = request.data.get("middle_name")
+        last_name = request.data.get("last_name")
+        tax_number = request.data.get("tax_number")
+        tax_document = request.FILES.get("tx_doc")
+        phone_number = request.data.get("phone_number")
+        email = request.data.get("email")
+        dob = request.data.get("dob")
+        age = request.data.get("age")
+        gender = request.data.get("gender")
+        profile_imge = request.FILES.get("profile_image")
+        
+        lang_array=  request.data.get("lang")
+        print(lang_array)
+        preferred_time_zone = request.data.get("prefered_time_zone")
+        remark = request.data.get("remark")
+        
+        address1 = request.data.get("address1")
+        address2 = request.data.get("address2")
+        country = request.data.get("country")
+        state = request.data.get("state")
+        city = request.data.get("city")
+        post_code = request.data.get("post_code")
+        
+        if len(post_code)<3 or len(post_code)>9:
+            return Response(
+                {
+                    "  error":"Postal code length is invalid"
+                },
+                400
+            )
+        
+        date_object = datetime.strptime(dob, "%Y-%m-%d")
+        if date_object> datetime.now():
+            return Response(
+                {
+                    'error':"Date of Birth can not be in future"
+                },
+                400
+            )
+        if int(age)<0:
+            return Response(
+                {
+                    "error":"Age can not be negative"
+                },
+                400
+            )
+        
+        try:
+            with transaction.atomic():
+                lang_array = [i["language_name"] for i in lang_array]
+                print(lang_array)
+                
+                lang_objs = Language.objects.filter(language_name__in = lang_array)
+                print(lang_objs)
+                
+                business_obj = Business.objects.create(
+                    business_type = Business.INDIVIDUAL,
+                    tax_number = tax_number,
+                    tax_document = tax_document
+                )
+                user_obj = UserAccount.objects.create(
+                    username = email,
+                    user_type = UserAccount.OPERATOR,
+                    prefix = prefix,
+                    first_name = first_name,
+                    middle_name = middle_name,
+                    last_name = last_name,
+                    email = email,
+                    gender = gender,
+                    profile_image = profile_imge,
+                    dob = dob,
+                    age = age,
+                    added_by = user,
+                    preferred_time_zone = preferred_time_zone,
+                    remark = remark,
+                    business = business_obj
+                )
+                lang_mappings = []
+                for i in lang_objs:
+                    mapping = UserLaguageMapping.objects.create(
+                        user = user_obj,
+                        language = i 
+                    )
+                    lang_mappings.append(mapping)
+
+                contact_obj = ContactNumber.objects.create(
+                    business = business_obj,
+                    country_code = phone_number["country_code"].replace('+',''),
+                    number = int(phone_number["number"])
+                )
+                
+                add_obj = Address.objects.create(
+                    business = business_obj,
+                    line_1 = address1,
+                    line_2 = address2,
+                    country = country,
+                    state = state,
+                    city = city,
+                    postal_code = post_code
+                )
+                add_objs = Address.objects.filter(
+                    business = business_obj,
+                )
+                lang_objs = [i.language for i in lang_mappings]
+                
+                
+                lang_serializer = LanguageSerializer(lang_objs, many = True)
+                business_serializer =BusinessSerializer(business_obj)
+                user_serializer = UserAccountSerializer(user_obj)
+                contact_serializer = ContactNumberSerializer(contact_obj)
+                address_serializer = AddressSerializer(add_objs,many = True)
+                resp_data = {
+                    "business":business_serializer.data,
+                    "user":user_serializer.data,
+                    "language":lang_serializer.data,
+                    "contact":contact_serializer.data,
+                    "address":address_serializer.data
+                }
+                return Response(
+                    resp_data,
+                    200
+                )
+            
+        except Exception as e:
+            print(str(e))
+            return Response(
+                {
+                    "error":f"Failed to create the user because of \n {str(e)}"
+                },
+                400
+            )
+    
+    def patch(self, request, format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        user_id = request.data.get("user_id")
+        
+        prefix = request.data.get("prefix")
+        first_name = request.data.get("first_name")
+        middle_name = request.data.get("middle_name")
+        last_name = request.data.get("last_name")
+        tax_number = request.data.get("tax_number")
+        tax_document = request.FILES.get("tx_doc")
+        phone_number = request.data.get("phone_number")
+        email = request.data.get("email")
+        dob = request.data.get("dob")
+        age = request.data.get("age")
+        gender = request.data.get("gender")
+        profile_imge = request.FILES.get("profile_image")
+        status = request.data.get("status")
+        
+        lang_array=  request.data.get("lang")
+        preferred_time_zone = request.data.get("prefered_time_zone")
+        remark = request.data.get("remark")
+        
+        address1 = request.data.get("address1")
+        address2 = request.data.get("address2")
+        country = request.data.get("country")
+        state = request.data.get("state")
+        city = request.data.get("city")
+        post_code = request.data.get("post_code")
+        
+        try:
+            user_obj = UserAccount.objects.get(id = user_id, user_type = UserAccount.OPERATOR)
+        except UserAccount.DoesNotExist:
+            return Response(
+                {
+                    "error":"User with given id does not exists"
+                },
+                400
+            )
+        
+        if lang_array:
+            lang_array = [i["language_name"] for i in lang_array]
+                
+            lang_objs = Language.objects.filter(language_name__in = lang_array)
+        business_obj  = user_obj.business
+            
+        if tax_number:
+            business_obj.tax_number = tax_number
+        if tax_document:
+            business_obj.tax_document = tax_document
+        business_obj.save()
+        
+        user_obj = UserAccount.objects.get(business = business_obj)
+            
+        if prefix:
+            user_obj.prefix = prefix
+        if first_name:
+            user_obj.first_name = first_name
+        if middle_name:
+            user_obj.middle_name = middle_name
+        if last_name:
+            user_obj.last_name = last_name
+        if email:
+            user_obj.email = email
+            user_obj.username = email
+        if gender:
+            user_obj.gender = gender
+        if dob:
+            user_obj.dob = dob
+        if age:
+            user_obj.age = age
+            
+        if status:
+            user_obj.status = status
+        if lang_array:
+            lang_mapping_objs = UserLaguageMapping.objects.filter(user = user_obj)
+            lang_mapping_objs.delete()
+            for i in lang_objs:
+                UserLaguageMapping.objects.create(
+                    user = user_obj,
+                    language = i 
+                )
+        if preferred_time_zone:
+            user_obj.preferred_time_zone = preferred_time_zone
+        if remark :
+            user_obj.remark = remark
+        if profile_imge:
+            user_obj.profile_image = profile_imge
+        user_obj.save()
+        
+        if phone_number:
+            contact_obj = ContactNumber.objects.filter(business = business_obj).first()
+            contact_obj.country_code = phone_number["country_code"].replace("+",'')
+            contact_obj.number = int(phone_number["number"])
+            contact_obj.save()
+          
+        add_obj = Address.objects.filter(business = business_obj).first()
+        if address1:
+            add_obj.line_1 = address1
+        if address2:
+            add_obj.line_2 = address2
+        if city:
+            add_obj.city = city
+        if state:
+            add_obj.state = state
+        if country:
+            add_obj.country=  country
+        if post_code:
+            add_obj.postal_code = post_code
+        add_obj.save()
+        
+        return Response(
+            {
+                "data":operator_group_serializer_func(user_obj)
+            },
+            200
+        )
+        
+    def delete(self, request,format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an Admin"
+                },
+                400
+            )
+        
+        id = request.data.get("user_id")
+        user_obj = UserAccount.objects.get(id = id)
+        user_obj.is_deleted = True
+        user_obj.save()
+        business_obj = user_obj.business
+        business_obj.is_deleted = True
+        business_obj.save()
+        contact_objs = ContactNumber.objects.filter(business = business_obj)
+        contact_objs.update(is_deleted = True)
+        add_objs = Address.objects.filter(business = business_obj)
+        add_objs.update(is_deleted = True)
+        user_obj.user_languages.all().delete()
+        
+        return Response(
+            {
+                "success":"The Operator has been deleted"
+            },
+            200
+        )
+        
+
+class AdminListOperator(APIView):
+    
+    authentication_classes = [JwtAuthentication,]
+    
+    def get(self, request, format = None):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        
+        users = UserAccount.objects.filter(
+            user_type = UserAccount.OPERATOR,
+            is_archived = False,
+            is_deleted = False
+        ).order_by("-created_at")
+        resp_data= []
+        for u in users:
+            resp_data.append(operator_group_serializer_func(u))
+            
+        return Response(
+            {
+                "data":resp_data
+            },
+            200
+        )
+     

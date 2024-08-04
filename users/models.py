@@ -6,19 +6,22 @@ from django.contrib.auth.models import AbstractUser, PermissionsMixin
 class Business(models.Model):
     CLINIC = "CLINIC"
     RESELLER = "RESELLER"
+    INDIVIDUAL = "INDIVIDUAL"
     BUSINESS_TYPE_CHOICES = [
-        (CLINIC,CLINIC),
-        (RESELLER,"RESELLER")
+        (CLINIC,"CLINIC"),
+        (RESELLER,"RESELLER"),
+        (INDIVIDUAL,"INDIVIDUAL")
     ]
-    business_type = models.CharField(max_length= 25, choices= BUSINESS_TYPE_CHOICES, default= CLINIC)
-    organization_name = models.CharField(max_length=50)
+    tax_number = models.CharField(max_length=100)
+    tax_document = models.FileField(upload_to='documents', blank = True, null = True)
+    business_type = models.CharField(max_length= 25, choices= BUSINESS_TYPE_CHOICES, default= INDIVIDUAL)
+    organization_name = models.CharField(max_length=50, blank = True, null = True)
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_archived = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     search_string = search_string = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
@@ -55,12 +58,25 @@ class UserAccount(AbstractUser):
         (BLOCKED,BLOCKED),
         (PENDING,PENDING)
     ]
+    
+    MALE = "MALE"
+    FEMALE = "FEMALE"
+    OTHER = "OTHER"
+    
+    GENDER_CHOICES = [
+        (MALE,"MALE"),
+        (FEMALE, "FEMALE"),
+        (OTHER,"OTHER")
+    ]
 
+    profile_image = models.FileField(upload_to='profile_images', null = True, blank = True)
+    prefix = models.CharField(max_length = 5, default = "Mr.", null =True, blank = True)
     status = models.CharField(max_length= 50,choices=USER_STATUS_CHOICES,default=ACTIVE)
     user_type = models.CharField(max_length=25, choices= USER_TYPE_CHOICES, default = PATIENT)
     full_name = models.CharField(max_length=90)
     middle_name = models.CharField(max_length = 25,default = "", blank = True)
-    dob = models.DateField()
+    gender = models.CharField(max_length = 25,default= MALE, choices=GENDER_CHOICES, null = True, blank = True)
+    dob = models.DateField(blank = True, null = True)
     age = models.IntegerField(blank = True, null = True)
     business = models.ForeignKey(Business, null=True, blank = True,related_name="business_user", on_delete=models.CASCADE)
     is_email_verified = models.BooleanField(default=False)
@@ -70,9 +86,10 @@ class UserAccount(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     search_string = models.TextField(blank=True, null=True)
-    preferred_time_zone = models.CharField(max_length = 25, default = "CDT")
-    preferred_language = models.ForeignKey(Language,null = True, blank = True, on_delete= models.SET_NULL, related_name="preferred_users")
+    preferred_time_zone = models.CharField(max_length = 25, default = "CDT", null = True, blank = True)
     added_by = models.ForeignKey('self',blank = True, null = True, related_name="added_users",on_delete= models.SET_NULL)    
+    price_per_unit = models.FloatField(default = 0.00)
+    remark = models.TextField(blank = True, null = True)
 
     def save(self, *args, **kwargs):
 
@@ -88,6 +105,14 @@ class UserAccount(AbstractUser):
 
         super().save(*args, **kwargs)
         
+        
+class UserLaguageMapping(models.Model):
+    user = models.ForeignKey(UserAccount,related_name = "user_languages",on_delete = models.CASCADE)
+    language = models.ForeignKey(Language,related_name= "language_users",on_delete = models.CASCADE)
+    
+    class Meta:
+        unique_together = ('user', 'language')
+    
 class UserTreatmentMapping(models.Model):
     SOUND_TREATMENT = "SOUND_TREATMENT"
     RF_LEFT = "RF_LEFT"

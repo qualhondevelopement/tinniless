@@ -64,3 +64,14 @@ class GetAllLanguage(APIView):
             },
             200
         )
+        
+
+class GetTaxDocumentTypes(APIView):
+    def get(self,request,format =None):
+        doc_types = DOCUMENT_TYPES
+        return Response(
+            {
+                "success":"Data Fetched",
+                "data":doc_types
+            }
+        )

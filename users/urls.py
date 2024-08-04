@@ -18,8 +18,9 @@ urlpatterns = [
     # Admin APIs
     path('administration/manage-patient/',AdminManagePatient.as_view(),name = "admin_manage_patient"),
     path('administration/list-patient/',AdminListPatient.as_view(),name = "admin_list_patient"),
-    # path('administration/manage-operator/'),
-    # path('administration/list-operator/'),
+    
+    path('administration/list-operator/',AdminListOperator.as_view(),name = "list_operator"),
+    path('administration/manage-operator/',AdminManageOperator.as_view(),name = "admin-manage-operator"),
     
     
     

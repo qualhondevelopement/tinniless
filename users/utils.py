@@ -44,7 +44,7 @@ def create_login_session(request, user, ip):
 class JwtAuthentication(BaseAuthentication):
     def authenticate(self, request):
 
-        try:
+        # try:
             token = request.headers.get('Authorization', '').split(' ')[1]
             print(token)
             if not token:
@@ -83,9 +83,10 @@ class JwtAuthentication(BaseAuthentication):
                 raise exceptions.AuthenticationFailed({"error":msg},code = 403)
 
             return user, None
-        except:
-            msg = 'Unauthorized'
-            raise exceptions.AuthenticationFailed({"error":msg},code = 403)
+        # except Exception as e:
+        #     print(str(e))
+        #     msg = 'Unauthorized'
+        #     raise exceptions.AuthenticationFailed({"error":msg},code = 403)
 
 
 def update_logout_session(jwt_token, **kwargs):
