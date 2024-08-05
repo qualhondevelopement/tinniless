@@ -169,3 +169,45 @@ def operator_group_serializer_func(user_obj):
         "address":address_serializer.data
     }
     return data
+
+def reseller_group_serializer_func(user_obj):
+
+    business_obj = user_obj.business
+    
+    personal_contact_obj = ContactNumber.objects.get(user = user_obj,is_deleted = False)
+    business_contact_obj = ContactNumber.objects.get(business = business_obj,is_deleted = False)
+    add_objs = Address.objects.filter(business = business_obj,is_deleted = False)
+    
+    user_serializer = UserAccountSerializer(user_obj)
+    business_serializer = BusinessSerializer(business_obj)
+    personal_contact_serializer = ContactNumberSerializer(personal_contact_obj)
+    business_contact_serializer = ContactNumberSerializer(business_contact_obj)
+    address_serializer = AddressSerializer(add_objs,many = True)
+    data = {
+        "user":user_serializer.data,
+        "business":business_serializer.data,
+        "personal_contact":personal_contact_serializer.data,
+        "business_contact":business_contact_serializer.data,
+        "address":address_serializer.data
+    }
+    return data
+
+def retailer_group_serializer_func(user_obj):
+
+    mappings = UserLaguageMapping.objects.filter(user = user_obj)
+    lang_objs = [i.language for i in mappings]
+    
+    contact_obj = ContactNumber.objects.get(user = user_obj,is_deleted = False)
+    add_obj = Address.objects.filter(user = user_obj,is_deleted = False)
+    
+    user_serializer = UserAccountSerializer(user_obj)
+    contact_serializer = ContactNumberSerializer(contact_obj)
+    address_serializer = AddressSerializer(add_obj,many = True)
+    language_serializer  = LanguageSerializer(lang_objs,many = True)
+    data = {
+        "user":user_serializer.data,
+        "language":language_serializer.data,
+        "contact":contact_serializer.data,
+        "address":address_serializer.data
+    }
+    return data

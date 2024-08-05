@@ -39,12 +39,14 @@ class UserAccount(AbstractUser):
     PATIENT = "PATIENT"
     OPERATOR = "OPERATOR"
     RESELLER = "RESELLER"
+    RETAILER = "RETAILER"
     
     USER_TYPE_CHOICES = [
         (ADMIN,"ADMIN"),
         (PATIENT, "PATIENT"),
         (OPERATOR, "OPERATOR"),
-        (RESELLER,"RESELLER")
+        (RESELLER,"RESELLER"),
+        (RETAILER,"RETAILER")
     ]
     
     ACTIVE = "ACTIVE"
@@ -90,6 +92,7 @@ class UserAccount(AbstractUser):
     added_by = models.ForeignKey('self',blank = True, null = True, related_name="added_users",on_delete= models.SET_NULL)    
     price_per_unit = models.FloatField(default = 0.00)
     remark = models.TextField(blank = True, null = True)
+    reseller_type = models.CharField(max_length=50,blank = True, null = True)
 
     def save(self, *args, **kwargs):
 
