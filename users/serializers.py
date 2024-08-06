@@ -14,13 +14,14 @@ class UserAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAccount
         fields = ['id','username','profile_image','prefix','first_name','middle_name','last_name','email','user_type','full_name','status',
-                  'gender','dob','age','preferred_time_zone','added_by','price_per_unit']
+                  'gender','dob','age','preferred_time_zone','added_by','price_per_unit','remark']
         
     def get_added_by(self,obj):
         return obj.added_by.first_name if obj.added_by else None
     
     def get_price_per_unit(self,obj):
-        return f"{obj.price_per_unit:05.2f}"
+        # return obj.price_per_unit:05.2f
+        return obj.price_per_unit
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:

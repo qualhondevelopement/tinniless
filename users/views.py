@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authtoken.models import Token
 from .utils import *
 import json
-#=======================================================================================================================
+#===USER_AUTH===========================================================================================================
 
 class LoginAPI(APIView):
     def get_user(self, email):
@@ -206,7 +206,7 @@ class IsExisting(APIView):
         )
         
 
-#=======================================================================================================================
+#===PATIENT=============================================================================================================
 
 class AdminManagePatient(APIView):
     
@@ -319,90 +319,90 @@ class AdminManagePatient(APIView):
                 400
             )
         
-        try:
-            with transaction.atomic():
-                
-                
-                lang_obj = Language.objects.get(language_name = lang)
-                user_obj = UserAccount.objects.create(
-                    user_type = UserAccount.PATIENT,
-                    first_name = first_name,
-                    middle_name = middle_name,
-                    last_name = last_name,
-                    email = email,
-                    gender = gender,
-                    dob = dob,
-                    age = age,
-                    added_by = user,
-                    price_per_unit = price_per_unit
-                )
-                mapp = UserLaguageMapping.objects.create(
-                    user = user_obj,
-                    language = lang_obj
-                )
-                contact_obj = ContactNumber.objects.create(
-                    user = user_obj,
-                    country_code = phone_number["country_code"].replace('+',''),
-                    number = int(phone_number["number"])
-                )
-                if tinnitus_start_date == "":
-                    tinnitus_start_date = None
-                mediacal_record_obj = MedicalRecord.objects.create(
-                    tinnitus_start_date = tinnitus_start_date,
-                    ears = ears,
-                    tinnitus_type = tinnitus_type,
-                    patient  = user_obj
-                )
-                for i in treatment:
-                    treatment_obj = UserTreatmentMapping.objects.create(
-                        treatment_type = i,
-                        user = user_obj
-                    )
-                treatments=  UserTreatmentMapping.objects.filter(user =user_obj)
-                add_obj = Address.objects.create(
-                    user = user_obj,
-                    line_1 = address1,
-                    line_2 = address2,
-                    country = country,
-                    state = state,
-                    city = city,
-                    postal_code = post_code
-                )
-                add_objs = Address.objects.filter(
-                    user = user_obj,
-                )
-                lang_serializer = LanguageSerializer(lang_obj)
-                user_serializer = UserAccountSerializer(user_obj)
-                contact_serializer = ContactNumberSerializer(contact_obj)
-                medical_record_serializer = MedicalRecordSerializer(
-                    mediacal_record_obj
-                )
-                treatment_serializer = UserTreatmentMappingSerializer(
-                    treatments,
-                    many = True
-                )
-                address_serializer = AddressSerializer(add_objs,many = True)
-                resp_data = {
-                    "user":user_serializer.data,
-                    "language":lang_serializer.data,
-                    "contact":contact_serializer.data,
-                    "medical_record":medical_record_serializer.data,
-                    "treatment":treatment_serializer.data,
-                "address":address_serializer.data
-                }
-                return Response(
-                    resp_data,
-                    200
-                )
-                
-        except Exception as e:
-            print(str(e))
-            return Response(
-                {
-                    "error":f"Failed to create the user because of \n {str(e)}"
-                },
-                400
+        # try:
+        with transaction.atomic():
+            
+            
+            lang_obj = Language.objects.get(language_name = lang)
+            user_obj = UserAccount.objects.create(
+                user_type = UserAccount.PATIENT,
+                first_name = first_name,
+                middle_name = middle_name,
+                last_name = last_name,
+                email = email,
+                gender = gender,
+                dob = dob,
+                age = age,
+                added_by = user,
+                price_per_unit = price_per_unit if price_per_unit else 0.00
             )
+            mapp = UserLaguageMapping.objects.create(
+                user = user_obj,
+                language = lang_obj
+            )
+            contact_obj = ContactNumber.objects.create(
+                user = user_obj,
+                country_code = phone_number["country_code"].replace('+',''),
+                number = int(phone_number["number"])
+            )
+            if tinnitus_start_date == "":
+                tinnitus_start_date = None
+            mediacal_record_obj = MedicalRecord.objects.create(
+                tinnitus_start_date = tinnitus_start_date,
+                ears = ears,
+                tinnitus_type = tinnitus_type,
+                patient  = user_obj
+            )
+            for i in treatment:
+                treatment_obj = UserTreatmentMapping.objects.create(
+                    treatment_type = i,
+                    user = user_obj
+                )
+            treatments=  UserTreatmentMapping.objects.filter(user =user_obj)
+            add_obj = Address.objects.create(
+                user = user_obj,
+                line_1 = address1,
+                line_2 = address2,
+                country = country,
+                state = state,
+                city = city,
+                postal_code = post_code
+            )
+            add_objs = Address.objects.filter(
+                user = user_obj,
+            )
+            lang_serializer = LanguageSerializer(lang_obj)
+            user_serializer = UserAccountSerializer(user_obj)
+            contact_serializer = ContactNumberSerializer(contact_obj)
+            medical_record_serializer = MedicalRecordSerializer(
+                mediacal_record_obj
+            )
+            treatment_serializer = UserTreatmentMappingSerializer(
+                treatments,
+                many = True
+            )
+            address_serializer = AddressSerializer(add_objs,many = True)
+            resp_data = {
+                "user":user_serializer.data,
+                "language":lang_serializer.data,
+                "contact":contact_serializer.data,
+                "medical_record":medical_record_serializer.data,
+                "treatment":treatment_serializer.data,
+            "address":address_serializer.data
+            }
+            return Response(
+                resp_data,
+                200
+            )
+                
+        # except Exception as e:
+        #     print(str(e))
+        #     return Response(
+        #         {
+        #             "error":f"Failed to create the user because of \n {str(e)}"
+        #         },
+        #         400
+        #     )
     
     def patch(self, request, format = None):
         user = request.user
@@ -426,6 +426,7 @@ class AdminManagePatient(APIView):
         lang=  request.data.get("lang",None)
         status = request.data.get("status", None)
         price_per_unit = request.data.get("price_per_unit")
+        gender = request.data.get("gender")
          
         tinnitus_start_date = request.data.get("tinnitus_start_date",None)
         ears = request.data.get("ears",None)
@@ -473,6 +474,9 @@ class AdminManagePatient(APIView):
             user_obj.age = age
         if price_per_unit:
             user_obj.price_per_unit = price_per_unit
+            
+        if gender:
+            user_obj.gender = gender
         if lang:
             mapping = user_obj.user_languages.all().first()
             if mapping :
@@ -599,7 +603,7 @@ class AdminListPatient(APIView):
             200
         )
         
-#=======================================================================================================================
+#===OPERATOR============================================================================================================
 
 class AdminManageOperator(APIView):
     
@@ -665,15 +669,16 @@ class AdminManageOperator(APIView):
         middle_name = request.data.get("middle_name")
         last_name = request.data.get("last_name")
         tax_number = request.data.get("tax_number")
-        tax_document = request.FILES.get("tx_doc")
-        phone_number = request.data.get("phone_number")
+        tax_document = request.FILES.get("tax_doc")
+        phone_number = json.loads(request.data.get("phone_number"))
+        print(phone_number)
         email = request.data.get("email")
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
         profile_imge = request.FILES.get("profile_image")
         
-        lang_array=  request.data.get("lang")
+        lang_array=  json.loads(request.data.get("lang"))
         print(lang_array)
         preferred_time_zone = request.data.get("prefered_time_zone")
         remark = request.data.get("remark")
@@ -709,8 +714,9 @@ class AdminManageOperator(APIView):
                 400
             )
         
-        try:
-            with transaction.atomic():
+        # try:
+        with transaction.atomic():
+                print(lang_array)
                 lang_array = [i["language_name"] for i in lang_array]
                 print(lang_array)
                 
@@ -787,14 +793,14 @@ class AdminManageOperator(APIView):
                     200
                 )
             
-        except Exception as e:
-            print(str(e))
-            return Response(
-                {
-                    "error":f"Failed to create the user because of \n {str(e)}"
-                },
-                400
-            )
+        # except Exception as e:
+        #     print(str(e))
+        #     return Response(
+        #         {
+        #             "error":f"Failed to create the user because of \n {str(e)}"
+        #         },
+        #         400
+        #     )
     
     def patch(self, request, format = None):
         user = request.user
@@ -812,8 +818,8 @@ class AdminManageOperator(APIView):
         middle_name = request.data.get("middle_name")
         last_name = request.data.get("last_name")
         tax_number = request.data.get("tax_number")
-        tax_document = request.FILES.get("tx_doc")
-        phone_number = request.data.get("phone_number")
+        tax_document = request.FILES.get("tax_doc")
+        phone_number = json.loads(request.data.get("phone_number"))
         email = request.data.get("email")
         dob = request.data.get("dob")
         age = request.data.get("age")
@@ -821,7 +827,7 @@ class AdminManageOperator(APIView):
         profile_imge = request.FILES.get("profile_image")
         status = request.data.get("status")
         
-        lang_array=  request.data.get("lang")
+        lang_array=  json.loads(request.data.get("lang"))
         preferred_time_zone = request.data.get("prefered_time_zone")
         remark = request.data.get("remark")
         
@@ -1092,8 +1098,8 @@ class AdminManageRetailer(APIView):
                 400
             )
         
-        try:
-            with transaction.atomic():
+        # try:
+        with transaction.atomic():
                 
                 lang_obj = Language.objects.get(
                     language_name__in = lang
@@ -1156,14 +1162,14 @@ class AdminManageRetailer(APIView):
                     200
                 )
             
-        except Exception as e:
-            print(str(e))
-            return Response(
-                {
-                    "error":f"Failed to create the user because of \n {str(e)}"
-                },
-                400
-            )
+        # except Exception as e:
+        #     print(str(e))
+        #     return Response(
+        #         {
+        #             "error":f"Failed to create the user because of \n {str(e)}"
+        #         },
+        #         400
+        #     )
     
     def patch(self,request ,format = None):
         user = request.user
@@ -1392,9 +1398,8 @@ class AdminManageReseller(APIView):
                 },
                 400
             )
-            
-        full_name = request.data.get("full_name")
-        name_list = full_name.split("full_name")
+        first_name = request.data.get("first_name")
+        last_name = request.data.get("last_name")    
         personal_phone_number = request.data.get("personal_phone_number")
         business_phone_number = request.data.get("business_phone_number")
         email = request.data.get("email")
@@ -1420,8 +1425,8 @@ class AdminManageReseller(APIView):
             )
         
         
-        try:
-            with transaction.atomic():
+        # try:
+        with transaction.atomic():
                 
                 business_obj = Business.objects.create(
                     business_type = Business.RESELLER,
@@ -1433,8 +1438,8 @@ class AdminManageReseller(APIView):
                 user_obj = UserAccount.objects.create(
                     username = email,
                     user_type = UserAccount.RESELLER,
-                    first_name = name_list[0],
-                    last_name = " ".join(name_list[1:]) if len(name_list) > 1 else "",
+                    first_name = first_name,
+                    last_name = last_name,
                     email = email,
                     added_by = user,
                     price_per_unit = price_per_unit,
@@ -1484,14 +1489,14 @@ class AdminManageReseller(APIView):
                     200
                 )
             
-        except Exception as e:
-            print(str(e))
-            return Response(
-                {
-                    "error":f"Failed to create the user because of \n {str(e)}"
-                },
-                400
-            )
+        # except Exception as e:
+        #     print(str(e))
+        #     return Response(
+        #         {
+        #             "error":f"Failed to create the user because of \n {str(e)}"
+        #         },
+        #         400
+        #     )
     
     
     def patch(self,request ,format = None):
