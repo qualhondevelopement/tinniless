@@ -14,7 +14,7 @@ class UserAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAccount
         fields = ['id','username','profile_image','prefix','first_name','middle_name','last_name','email','user_type','full_name','status',
-                  'gender','dob','age','preferred_time_zone','added_by','price_per_unit','remark']
+                  'gender','dob','age','preferred_time_zone','added_by','price_per_unit','remark', 'reseller_type']
         
     def get_added_by(self,obj):
         return obj.added_by.first_name if obj.added_by else None

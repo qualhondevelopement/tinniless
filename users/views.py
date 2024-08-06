@@ -278,6 +278,21 @@ class AdminManagePatient(APIView):
         phone_number = request.data.get("phone_number")
         email = request.data.get("email")
         gender = request.data.get("gender")
+        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+            return Response(
+                {
+                    "error":"Gender is Invalid"
+                },
+                400
+            )
+        if gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+            return Response(
+                {
+                    "error":"Gender is Invalid"
+                },
+                400
+            )
+        
         dob = request.data.get("dob")
         age = request.data.get("age")
         lang=  request.data.get("lang") 
@@ -427,6 +442,13 @@ class AdminManagePatient(APIView):
         status = request.data.get("status", None)
         price_per_unit = request.data.get("price_per_unit")
         gender = request.data.get("gender")
+        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+            return Response(
+                {
+                    "error":"Gender is Invalid"
+                },
+                400
+            )
          
         tinnitus_start_date = request.data.get("tinnitus_start_date",None)
         ears = request.data.get("ears",None)
@@ -676,6 +698,13 @@ class AdminManageOperator(APIView):
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
+        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+            return Response(
+                {
+                    "error":"Gender is Invalid"
+                },
+                400
+            )
         profile_imge = request.FILES.get("profile_image")
         
         lang_array=  json.loads(request.data.get("lang"))
@@ -819,15 +848,26 @@ class AdminManageOperator(APIView):
         last_name = request.data.get("last_name")
         tax_number = request.data.get("tax_number")
         tax_document = request.FILES.get("tax_doc")
-        phone_number = json.loads(request.data.get("phone_number"))
+        phone_number = request.data.get("phone_number")
+        if phone_number:
+            phone_number = json.loads(phone_number)
         email = request.data.get("email")
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
+        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+            return Response(
+                {
+                    "error":"Gender is Invalid"
+                },
+                400
+            )
         profile_imge = request.FILES.get("profile_image")
         status = request.data.get("status")
         
-        lang_array=  json.loads(request.data.get("lang"))
+        lang_array=  request.data.get("lang")
+        if lang_array:
+            lang_array = json.loads(lang_array)
         preferred_time_zone = request.data.get("prefered_time_zone")
         remark = request.data.get("remark")
         
@@ -1063,6 +1103,13 @@ class AdminManageRetailer(APIView):
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
+        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+            return Response(
+                {
+                    "error":"Gender is Invalid"
+                },
+                400
+            )
         price_per_unit = request.data.get("price_per_unit")
         
         lang=  request.data.get("lang")
@@ -1190,6 +1237,13 @@ class AdminManageRetailer(APIView):
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
+        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+            return Response(
+                {
+                    "error":"Gender is Invalid"
+                },
+                400
+            )
         price_per_unit = request.data.get("price_per_unit")
         status = request.data.get("status")
         
@@ -1399,6 +1453,7 @@ class AdminManageReseller(APIView):
                 400
             )
         first_name = request.data.get("first_name")
+        middle_name =request.data.get("middle_name")
         last_name = request.data.get("last_name")    
         personal_phone_number = request.data.get("personal_phone_number")
         business_phone_number = request.data.get("business_phone_number")
@@ -1439,6 +1494,7 @@ class AdminManageReseller(APIView):
                     username = email,
                     user_type = UserAccount.RESELLER,
                     first_name = first_name,
+                    middle_name = middle_name,
                     last_name = last_name,
                     email = email,
                     added_by = user,
@@ -1469,7 +1525,7 @@ class AdminManageReseller(APIView):
                     postal_code = post_code
                 )
                 add_objs = Address.objects.filter(
-                    user = user_obj,
+                    business = business_obj,
                 )
                 
                 user_serializer = UserAccountSerializer(user_obj)
@@ -1508,9 +1564,12 @@ class AdminManageReseller(APIView):
                 },
                 400
             )
+        print(request.data)
         user_id = request.data.get("user_id")
         
-        full_name = request.data.get("full_name")
+        first_name = request.data.get("first_name")
+        middle_name= request.data.get("middle_name")
+        last_name = request.data.get("last_name")
         
         personal_phone_number = request.data.get("personal_phone_number")
         business_phone_number = request.data.get("business_phone_number")
@@ -1555,10 +1614,12 @@ class AdminManageReseller(APIView):
         user_obj = UserAccount.objects.get(business = business_obj)
             
 
-        if full_name:
-            name_list = full_name.split("full_name")
-            user_obj.first_name = name_list[0]
-            user_obj.last_name = " ".join(name_list[1:]) if len(name_list) > 1 else ""
+        if first_name :
+            user_obj.first_name = first_name
+        if middle_name:
+            user_obj.middle_name = middle_name
+        if last_name:
+            user_obj.last_name = last_name
         if email:
             user_obj.email = email
             user_obj.username = email
