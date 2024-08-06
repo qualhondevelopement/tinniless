@@ -278,14 +278,7 @@ class AdminManagePatient(APIView):
         phone_number = request.data.get("phone_number")
         email = request.data.get("email")
         gender = request.data.get("gender")
-        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
-            return Response(
-                {
-                    "error":"Gender is Invalid"
-                },
-                400
-            )
-        if gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+        if gender and gender not in ["male","female","other"]:
             return Response(
                 {
                     "error":"Gender is Invalid"
@@ -442,7 +435,7 @@ class AdminManagePatient(APIView):
         status = request.data.get("status", None)
         price_per_unit = request.data.get("price_per_unit")
         gender = request.data.get("gender")
-        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+        if gender and gender not in ["male","female","other"]:
             return Response(
                 {
                     "error":"Gender is Invalid"
@@ -698,7 +691,7 @@ class AdminManageOperator(APIView):
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
-        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+        if gender and gender not in ["male","female","other"]:
             return Response(
                 {
                     "error":"Gender is Invalid"
@@ -855,7 +848,7 @@ class AdminManageOperator(APIView):
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
-        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+        if gender and gender not in ["male","female","other"]:
             return Response(
                 {
                     "error":"Gender is Invalid"
@@ -1103,7 +1096,7 @@ class AdminManageRetailer(APIView):
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
-        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+        if gender and gender not in ["male","female","other"]:
             return Response(
                 {
                     "error":"Gender is Invalid"
@@ -1149,7 +1142,7 @@ class AdminManageRetailer(APIView):
         with transaction.atomic():
                 
                 lang_obj = Language.objects.get(
-                    language_name__in = lang
+                    language_name = lang
                 )
                 
                 user_obj = UserAccount.objects.create(
@@ -1237,7 +1230,7 @@ class AdminManageRetailer(APIView):
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
-        if gender and gender not in [UserAccount.MALE, UserAccount.FEMALE, UserAccount.OTHER]:
+        if gender and gender not in ["male","female","other"]:
             return Response(
                 {
                     "error":"Gender is Invalid"
