@@ -1261,9 +1261,8 @@ class AdminManageRetailer(APIView):
                 },
                 400
             )
-        
         if lang:
-            lang_obj = Language.objects.filter(language_name__in = lang["language_name"])
+            lang_obj = Language.objects.get(language_name = lang)
             
         
         if first_name:
