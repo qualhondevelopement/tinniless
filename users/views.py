@@ -469,21 +469,6 @@ class AdminManagePatient(APIView):
         lang=  request.data.get("lang",None)
         status = request.data.get("status", None)
         price_per_unit = request.data.get("price_per_unit")
-        if price_per_unit:
-            try:
-                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
-            except Currency.DoesNotExist:
-                return Response(
-                    {
-                        "error":"This currency does not exist in the backend"
-                    },
-                    400
-                )
-            else:
-                currency_map_obj = CurrencyValueMapping.objects.create(
-                    currency = currency_obj,
-                    value = price_per_unit["value"]
-                )
         gender = request.data.get("gender")
         if gender and gender not in ["male","female","other"]:
             return Response(
@@ -514,6 +499,22 @@ class AdminManagePatient(APIView):
                 },
                 400
             )
+        if price_per_unit:
+            try:
+                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+            except Currency.DoesNotExist:
+                return Response(
+                    {
+                        "error":"This currency does not exist in the backend"
+                    },
+                    400
+                )
+            else:
+                old_currency_mapping_obj = user_obj.price_per_unit
+                # old_currency_mapping_obj.delete()
+                old_currency_mapping_obj.currency = currency_obj
+                old_currency_mapping_obj.value = price_per_unit["value"]
+                old_currency_mapping_obj.save()
         if lang: 
             try:
                 lang_obj = Language.objects.get(language_name = lang)
@@ -536,8 +537,6 @@ class AdminManagePatient(APIView):
             user_obj.dob = dob
         if age:
             user_obj.age = age
-        if price_per_unit:
-            user_obj.price_per_unit = currency_map_obj
             
         if gender:
             user_obj.gender = gender
@@ -1327,21 +1326,6 @@ class AdminManageRetailer(APIView):
                 400
             )
         price_per_unit = request.data.get("price_per_unit")
-        if price_per_unit:
-            try:
-                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
-            except Currency.DoesNotExist:
-                return Response(
-                    {
-                        "error":"This currency does not exist in the backend"
-                    },
-                    400
-                )
-            else:
-                currency_map_obj = CurrencyValueMapping.objects.create(
-                    currency = currency_obj,
-                    value = price_per_unit["value"]
-                )
         status = request.data.get("status")
         
         lang=  request.data.get("lang")
@@ -1372,6 +1356,23 @@ class AdminManageRetailer(APIView):
                 },
                 400
             )
+            
+        if price_per_unit:
+            try:
+                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+            except Currency.DoesNotExist:
+                return Response(
+                    {
+                        "error":"This currency does not exist in the backend"
+                    },
+                    400
+                )
+            else:
+                old_currency_mapping_obj = user_obj.price_per_unit
+                # old_currency_mapping_obj.delete()
+                old_currency_mapping_obj.currency = currency_obj
+                old_currency_mapping_obj.value = price_per_unit["value"]
+                old_currency_mapping_obj.save()
         if lang:
             lang_obj = Language.objects.get(language_name = lang)
             
@@ -1391,8 +1392,6 @@ class AdminManageRetailer(APIView):
             user_obj.dob = dob
         if age:
             user_obj.age = age
-        if price_per_unit:
-            user_obj.price_per_unit= currency_map_obj
             
         if status:
             user_obj.status = status
@@ -1702,21 +1701,6 @@ class AdminManageReseller(APIView):
         reseller_type = request.data.get("reseller_type")
         tax_number = request.data.get("tax_number")
         price_per_unit = request.data.get("price_per_unit")
-        if price_per_unit:
-            try:
-                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
-            except Currency.DoesNotExist:
-                return Response(
-                    {
-                        "error":"This currency does not exist in the backend"
-                    },
-                    400
-                )
-            else:
-                currency_map_obj = CurrencyValueMapping.objects.create(
-                    currency = currency_obj,
-                    value = price_per_unit["value"]
-                )
         status = request.data.get("status")
         
         
@@ -1741,6 +1725,22 @@ class AdminManageReseller(APIView):
                 400
             )
         
+        if price_per_unit:
+            try:
+                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+            except Currency.DoesNotExist:
+                return Response(
+                    {
+                        "error":"This currency does not exist in the backend"
+                    },
+                    400
+                )
+            else:
+                old_currency_mapping_obj = user_obj.price_per_unit
+                # old_currency_mapping_obj.delete()
+                old_currency_mapping_obj.currency = currency_obj
+                old_currency_mapping_obj.value = price_per_unit["value"]
+                old_currency_mapping_obj.save()
 
         business_obj  = user_obj.business
             
@@ -1767,8 +1767,6 @@ class AdminManageReseller(APIView):
             user_obj.status = status
         if reseller_type:
             user_obj.reseller_type = reseller_type
-        if price_per_unit:
-            user_obj.price_per_unit = currency_map_obj
         
         user_obj.save()
         

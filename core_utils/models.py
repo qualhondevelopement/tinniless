@@ -14,6 +14,8 @@ class CurrencyValueMapping(models.Model):
     euro_equivalent_value = models.FloatField(default = 0)
 
     def save(self,*args,**kwargs):
+        if not self.value:
+            self.value = 0
         equivalent_value = self.value * self.currency.euro_equivalent
         self.euro_equivalent_value = equivalent_value
         super().save(*args, **kwargs)
