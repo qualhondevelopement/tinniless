@@ -15,6 +15,8 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.authtoken.models import Token
 from .utils import *
 import json
+from core_utils.models import *
+from core_utils.serializers import *
 #===USER_AUTH===========================================================================================================
 
 class LoginAPI(APIView):
@@ -232,6 +234,14 @@ class AdminManagePatient(APIView):
                 },
                 400
             )
+        if not user_obj.medical_record.all().exists():
+            return Response(
+                {
+                    "error":"Medical record for this patient does not exists"
+                },
+                400
+            )
+
         contact_obj = ContactNumber.objects.get(user = user_obj)
         medical_record_obj = MedicalRecord.objects.get(patient = user_obj)
         add_obj = Address.objects.filter(user = user_obj)
@@ -277,6 +287,10 @@ class AdminManagePatient(APIView):
         last_name = request.data.get("last_name")
         phone_number = request.data.get("phone_number")
         email = request.data.get("email")
+        if UserAccount.objects.filter(username=email).exists():
+            return Response({
+                "error":"User already exist with this email."
+            },400)
         gender = request.data.get("gender")
         if gender and gender not in ["male","female","other"]:
             return Response(
@@ -288,8 +302,29 @@ class AdminManagePatient(APIView):
         
         dob = request.data.get("dob")
         age = request.data.get("age")
-        lang=  request.data.get("lang") 
+        lang=  request.data.get("lang")
+        if lang not in [i.language_name for i in Language.objects.all()]:
+            return Response(
+                {
+                    "error": "Language does't exist."
+                },
+                400
+            )
         price_per_unit = request.data.get("price_per_unit")
+        try:
+            currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+        except Currency.DoesNotExist:
+            return Response(
+                {
+                    "error":"This currency does not exist in the backend"
+                },
+                400
+            )
+        else:
+            currency_map_obj = CurrencyValueMapping.objects.create(
+                currency = currency_obj,
+                value = price_per_unit["value"]
+            )
         
         tinnitus_start_date = request.data.get("tinnitus_start_date")
         ears = request.data.get("ears")
@@ -342,7 +377,7 @@ class AdminManagePatient(APIView):
                 dob = dob,
                 age = age,
                 added_by = user,
-                price_per_unit = price_per_unit if price_per_unit else 0.00
+                price_per_unit = currency_map_obj
             )
             mapp = UserLaguageMapping.objects.create(
                 user = user_obj,
@@ -428,12 +463,27 @@ class AdminManagePatient(APIView):
         middle_name = request.data.get("middle_name",None)
         last_name = request.data.get("last_name",None)
         phone_number = request.data.get("phone_number",None)
-        email = request.data.get("email",None)
+        # email = request.data.get("email",None)
         dob = request.data.get("dob",None)
         age = request.data.get("age",None)
         lang=  request.data.get("lang",None)
         status = request.data.get("status", None)
         price_per_unit = request.data.get("price_per_unit")
+        if price_per_unit:
+            try:
+                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+            except Currency.DoesNotExist:
+                return Response(
+                    {
+                        "error":"This currency does not exist in the backend"
+                    },
+                    400
+                )
+            else:
+                currency_map_obj = CurrencyValueMapping.objects.create(
+                    currency = currency_obj,
+                    value = price_per_unit["value"]
+                )
         gender = request.data.get("gender")
         if gender and gender not in ["male","female","other"]:
             return Response(
@@ -474,21 +524,20 @@ class AdminManagePatient(APIView):
                     },
                     400
                 )
-                
         if first_name:
             user_obj.first_name = first_name
         if middle_name:
             user_obj.middle_name = middle_name
         if last_name:
             user_obj.last_name = last_name
-        if email:
-            user_obj.email = email
+        # if email:
+        #     user_obj.email = email
         if dob:
             user_obj.dob = dob
         if age:
             user_obj.age = age
         if price_per_unit:
-            user_obj.price_per_unit = price_per_unit
+            user_obj.price_per_unit = currency_map_obj
             
         if gender:
             user_obj.gender = gender
@@ -514,17 +563,25 @@ class AdminManagePatient(APIView):
             contact_obj.number = int(phone_number["number"])
             contact_obj.save()
           
-          
-        medical_obj = MedicalRecord.objects.get(patient = user_obj)  
-        if  tinnitus_start_date != None:
-            if tinnitus_start_date == "":
-                tinnitus_start_date = None
-                medical_obj.tinnitus_start_date = tinnitus_start_date
-        if ears:
-            medical_obj.ears = ears
-        if tinnitus_type:
-            medical_obj.tinnitus_type = tinnitus_type
-        medical_obj.save()
+        if ears or tinnitus_start_date or tinnitus_type: 
+            try:
+                medical_obj = MedicalRecord.objects.get(patient = user_obj)
+            except:
+                return Response(
+                    {
+                        "error":"Medical Object of the given user does not exists"
+                    },
+                    400
+                )  
+            if  tinnitus_start_date != None:
+                if tinnitus_start_date == "":
+                    tinnitus_start_date = None
+                    medical_obj.tinnitus_start_date = tinnitus_start_date
+            if ears:
+                medical_obj.ears = ears
+            if tinnitus_type:
+                medical_obj.tinnitus_type = tinnitus_type
+            medical_obj.save()
         
         if treatment:
             treatments = UserTreatmentMapping.objects.filter(user = user_obj)
@@ -607,6 +664,7 @@ class AdminListPatient(APIView):
             is_archived = False,
             is_deleted = False
         ).order_by("-created_at")
+        # print(users)
         resp_data= []
         for u in users:
             resp_data.append(patient_group_serializer_func(u))
@@ -686,8 +744,11 @@ class AdminManageOperator(APIView):
         tax_number = request.data.get("tax_number")
         tax_document = request.FILES.get("tax_doc")
         phone_number = json.loads(request.data.get("phone_number"))
-        print(phone_number)
         email = request.data.get("email")
+        if UserAccount.objects.filter(username=email).exists():
+            return Response({
+                "error":"User already exist with this email."
+            },400)
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
@@ -701,7 +762,6 @@ class AdminManageOperator(APIView):
         profile_imge = request.FILES.get("profile_image")
         
         lang_array=  json.loads(request.data.get("lang"))
-        print(lang_array)
         preferred_time_zone = request.data.get("prefered_time_zone")
         remark = request.data.get("remark")
         
@@ -844,7 +904,6 @@ class AdminManageOperator(APIView):
         phone_number = request.data.get("phone_number")
         if phone_number:
             phone_number = json.loads(phone_number)
-        email = request.data.get("email")
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
@@ -906,9 +965,9 @@ class AdminManageOperator(APIView):
             user_obj.middle_name = middle_name
         if last_name:
             user_obj.last_name = last_name
-        if email:
-            user_obj.email = email
-            user_obj.username = email
+        # if email:
+        #     user_obj.email = email
+        #     user_obj.username = email
         if gender:
             user_obj.gender = gender
         if dob:
@@ -979,7 +1038,13 @@ class AdminManageOperator(APIView):
             )
         
         id = request.data.get("user_id")
-        user_obj = UserAccount.objects.get(id = id)
+        try:
+            user_obj = UserAccount.objects.get(id = id)
+        except UserAccount.DoesNotExist:
+            return Response({
+                'error':"User does't exist."
+            },
+            400)
         user_obj.is_deleted = True
         user_obj.save()
         business_obj = user_obj.business
@@ -1093,6 +1158,10 @@ class AdminManageRetailer(APIView):
         last_name = request.data.get("last_name")
         phone_number = request.data.get("phone_number")
         email = request.data.get("email")
+        if UserAccount.objects.filter(username=email).exists():
+            return Response({
+                "error":"User already exist with this email."
+            },400)
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
@@ -1104,8 +1173,29 @@ class AdminManageRetailer(APIView):
                 400
             )
         price_per_unit = request.data.get("price_per_unit")
+        try:
+            currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+        except Currency.DoesNotExist:
+            return Response(
+                {
+                    "error":"This currency does not exist in the backend"
+                },
+                400
+            )
+        else:
+            currency_map_obj = CurrencyValueMapping.objects.create(
+                currency = currency_obj,
+                value = price_per_unit["value"]
+            )
         
         lang=  request.data.get("lang")
+        if lang not in [i.language_name for i in Language.objects.all()]:
+            return Response(
+                {
+                    "error": "Language does't exist."
+                },
+                400
+            )
         
         address1 = request.data.get("address1")
         address2 = request.data.get("address2")
@@ -1156,7 +1246,7 @@ class AdminManageRetailer(APIView):
                     dob = dob,
                     age = age,
                     added_by = user,
-                    price_per_unit = price_per_unit
+                    price_per_unit = currency_map_obj
                 )
 
                 mapping = UserLaguageMapping.objects.create(
@@ -1226,7 +1316,6 @@ class AdminManageRetailer(APIView):
         middle_name = request.data.get("middle_name")
         last_name = request.data.get("last_name")
         phone_number = request.data.get("phone_number")
-        email = request.data.get("email")
         dob = request.data.get("dob")
         age = request.data.get("age")
         gender = request.data.get("gender")
@@ -1238,9 +1327,31 @@ class AdminManageRetailer(APIView):
                 400
             )
         price_per_unit = request.data.get("price_per_unit")
+        if price_per_unit:
+            try:
+                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+            except Currency.DoesNotExist:
+                return Response(
+                    {
+                        "error":"This currency does not exist in the backend"
+                    },
+                    400
+                )
+            else:
+                currency_map_obj = CurrencyValueMapping.objects.create(
+                    currency = currency_obj,
+                    value = price_per_unit["value"]
+                )
         status = request.data.get("status")
         
         lang=  request.data.get("lang")
+        if lang not in [i.language_name for i in Language.objects.all()]:
+            return Response(
+                {
+                    "error": "Language does't exist."
+                },
+                400
+            )
         
         address1 = request.data.get("address1")
         address2 = request.data.get("address2")
@@ -1271,9 +1382,9 @@ class AdminManageRetailer(APIView):
             user_obj.middle_name = middle_name
         if last_name:
             user_obj.last_name = last_name
-        if email:
-            user_obj.email = email
-            user_obj.username = email
+        # if email:
+        #     user_obj.email = email
+        #     user_obj.username = email
         if gender:
             user_obj.gender = gender
         if dob:
@@ -1281,7 +1392,7 @@ class AdminManageRetailer(APIView):
         if age:
             user_obj.age = age
         if price_per_unit:
-            user_obj.price_per_unit= price_per_unit
+            user_obj.price_per_unit= currency_map_obj
             
         if status:
             user_obj.status = status
@@ -1340,7 +1451,12 @@ class AdminManageRetailer(APIView):
             )
         
         id = request.data.get("user_id")
-        user_obj = UserAccount.objects.get(id = id)
+        try:
+            user_obj = UserAccount.objects.get(id = id)
+        except UserAccount.DoesNotExist:
+            return Response({
+                "error":"User does't exist."
+            },400)
         user_obj.is_deleted = True
         user_obj.save()
 
@@ -1450,10 +1566,28 @@ class AdminManageReseller(APIView):
         personal_phone_number = request.data.get("personal_phone_number")
         business_phone_number = request.data.get("business_phone_number")
         email = request.data.get("email")
+        if UserAccount.objects.filter(username=email).exists():
+            return Response({
+                "error":"User already exist with this email."
+            },400)
         organization_name = request.data.get("organization_name")
         reseller_type = request.data.get("reseller_type")
         tax_number = request.data.get("tax_number")
         price_per_unit = request.data.get("price_per_unit")
+        try:
+            currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+        except Currency.DoesNotExist:
+            return Response(
+                {
+                    "error":"This currency does not exist in the backend"
+                },
+                400
+            )
+        else:
+            currency_map_obj = CurrencyValueMapping.objects.create(
+                currency = currency_obj,
+                value = price_per_unit["value"]
+            )
         
         
         address1 = request.data.get("address1")
@@ -1490,7 +1624,7 @@ class AdminManageReseller(APIView):
                     last_name = last_name,
                     email = email,
                     added_by = user,
-                    price_per_unit = price_per_unit,
+                    price_per_unit = currency_map_obj,
                     business=business_obj,
                     reseller_type = reseller_type
                 )
@@ -1558,18 +1692,31 @@ class AdminManageReseller(APIView):
             )
         print(request.data)
         user_id = request.data.get("user_id")
-        
         first_name = request.data.get("first_name")
         middle_name= request.data.get("middle_name")
         last_name = request.data.get("last_name")
         
         personal_phone_number = request.data.get("personal_phone_number")
         business_phone_number = request.data.get("business_phone_number")
-        email = request.data.get("email")
         organization_name = request.data.get("organization_name")
         reseller_type = request.data.get("reseller_type")
         tax_number = request.data.get("tax_number")
         price_per_unit = request.data.get("price_per_unit")
+        if price_per_unit:
+            try:
+                currency_obj =Currency.objects.get(currency_symbol = price_per_unit["currency"])
+            except Currency.DoesNotExist:
+                return Response(
+                    {
+                        "error":"This currency does not exist in the backend"
+                    },
+                    400
+                )
+            else:
+                currency_map_obj = CurrencyValueMapping.objects.create(
+                    currency = currency_obj,
+                    value = price_per_unit["value"]
+                )
         status = request.data.get("status")
         
         
@@ -1612,16 +1759,16 @@ class AdminManageReseller(APIView):
             user_obj.middle_name = middle_name
         if last_name:
             user_obj.last_name = last_name
-        if email:
-            user_obj.email = email
-            user_obj.username = email
+        # if email:
+        #     user_obj.email = email
+        #     user_obj.username = email
             
         if status:
             user_obj.status = status
         if reseller_type:
             user_obj.reseller_type = reseller_type
         if price_per_unit:
-            user_obj.price_per_unit = price_per_unit
+            user_obj.price_per_unit = currency_map_obj
         
         user_obj.save()
         
@@ -1678,7 +1825,12 @@ class AdminManageReseller(APIView):
             )
         
         id = request.data.get("user_id")
-        user_obj = UserAccount.objects.get(id = id)
+        try:
+            user_obj = UserAccount.objects.get(id = id)
+        except UserAccount.DoesNotExist:
+            return Response({
+                "error":"User does't exists."
+            },400)
         user_obj.is_deleted = True
         user_obj.save()
         business_obj = user_obj.business

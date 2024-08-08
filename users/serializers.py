@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import *
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from core_utils.serializers import CurrencyValueMappingSerializer
 
 class BusinessSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,6 +23,12 @@ class UserAccountSerializer(serializers.ModelSerializer):
     def get_price_per_unit(self,obj):
         # return obj.price_per_unit:05.2f
         return obj.price_per_unit
+    def get_price_per_unit(self,obj):
+        if obj.price_per_unit:
+            serializer = CurrencyValueMappingSerializer(obj.price_per_unit)
+            return serializer.data
+        return None
+
 
 class AddressSerializer(serializers.ModelSerializer):
     class Meta:

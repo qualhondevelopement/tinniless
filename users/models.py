@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, PermissionsMixin
+from core_utils.models import CurrencyValueMapping
 
 class Business(models.Model):
     CLINIC = "CLINIC"
@@ -90,7 +91,7 @@ class UserAccount(AbstractUser):
     search_string = models.TextField(blank=True, null=True)
     preferred_time_zone = models.CharField(max_length = 25, default = "CDT", null = True, blank = True)
     added_by = models.ForeignKey('self',blank = True, null = True, related_name="added_users",on_delete= models.SET_NULL)    
-    price_per_unit = models.FloatField(default = 0.00)
+    price_per_unit = models.ForeignKey(CurrencyValueMapping,default = None, related_name = "price_mapping_user", on_delete= models.CASCADE, null= True, blank = True)
     remark = models.TextField(blank = True, null = True)
     reseller_type = models.CharField(max_length=50,blank = True, null = True)
 
@@ -188,7 +189,7 @@ class ContactNumber(models.Model):
     business = models.ForeignKey(Business, null=True, blank= True, on_delete=models.CASCADE)
     user = models.ForeignKey(UserAccount, null=True, blank = True, on_delete=models.CASCADE)
     country_code = models.CharField(max_length=5)
-    number = models.BigIntegerField(unique=True)
+    number = models.BigIntegerField()
     is_deleted = models.BooleanField(default=False)
 
 class CardDetails(models.Model):
