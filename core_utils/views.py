@@ -4,10 +4,13 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from rest_framework.response import Response
+from rest_framework import status
 from django.conf import settings
 import json
 from .utils import *
+from users.utils import *
 from users.serializers import *
+from .serializers import *
 # Create your views here.
 
 
@@ -75,3 +78,152 @@ class GetTaxDocumentTypes(APIView):
                 "data":doc_types
             }
         )
+    
+
+class ManageSettings(APIView):
+    authentication_classes = [JwtAuthentication,]
+    def patch(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        settings_id = request.data.get('settings_id')
+        try:
+            settings_obj = Settings.objects.get(id=settings_id)
+            serializer = SettingsSerializer(settings_obj,data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data,status=status.HTTP_400_BAD_REQUEST) 
+            return Response({
+                "error":serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST) 
+        except Settings.DoesNotExist:
+            return Response({
+                'error':'Setting not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+    def get(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        settings_id = request.query_params.get('settings_id')
+        try:
+            setting_obj = Settings.objects.get(id=settings_id)
+            serializer = SettingsSerializer(setting_obj)
+             
+            return Response({
+                "success":"Data Fetched",
+                "data":serializer.data
+                },
+                status=status.HTTP_200_OK) 
+        except Settings.DoesNotExist:
+            return Response({
+                'error':'Setting not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+class ManageFeedback(APIView):
+    authentication_classes = [JwtAuthentication,]
+    def post(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        serializer = FeedbackSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK) 
+        return Response({
+            "error":serializer.errors
+            },
+            status=status.HTTP_400_BAD_REQUEST) 
+
+    def patch(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        feedback_id = request.data.get('feedback_id')
+        try:
+            feedback_obj = Feedback.objects.get(id=feedback_id)
+            serializer = FeedbackSerializer(feedback_obj,data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data,status=status.HTTP_200_OK) 
+            return Response({
+                "error":serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST) 
+        except Settings.DoesNotExist:
+            return Response({
+                'error':'Feedback not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+    def get(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        feedback_id = request.query_params.get('feedback_id')
+        try:
+            feedback_obj = Feedback.objects.get(id=feedback_id)
+            serializer = FeedbackSerializer(feedback_obj)
+             
+            return Response({
+                "success":"Data Fetched",
+                "data":serializer.data
+                },
+                status=status.HTTP_200_OK) 
+        except Settings.DoesNotExist:
+            return Response({
+                'error':'Feedback not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        feedback_id = request.query_params.get('feedback_id')
+        try:
+            feedback_obj = Feedback.objects.get(id=feedback_id)
+            feedback_obj.is_deleted = True
+            feedback_obj.save()
+            return Response({
+                "success":"Feedback has been deleted.",
+                },
+                status=status.HTTP_200_OK) 
+        except Settings.DoesNotExist:
+            return Response({
+                'error':'Feedback not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)

@@ -11,3 +11,24 @@ class CurrencyValueMappingSerializer(serializers.ModelSerializer):
     class Meta:
         model = CurrencyValueMapping
         fields = ['currency','value']
+
+
+class SettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Settings
+        fields = '__all__'
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feedback
+        fields = '__all__'
+
+class MusicCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MusicCategory
+        fields = '__all__'
+
+class MusicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MusicFiles
+        fields = '__all__'
