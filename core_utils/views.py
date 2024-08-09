@@ -222,8 +222,246 @@ class ManageFeedback(APIView):
                 "success":"Feedback has been deleted.",
                 },
                 status=status.HTTP_200_OK) 
-        except Settings.DoesNotExist:
+        except Feedback.DoesNotExist:
             return Response({
                 'error':'Feedback not found'
                 },
                 status=status.HTTP_400_BAD_REQUEST)
+        
+
+class GetFeedbackList(APIView):
+    authentication_classes = [JwtAuthentication,]
+    def get(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        feedback_obj = Feedback.objects.all()
+        serializer = FeedbackSerializer(feedback_obj,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+    
+
+class ManageMusicCategory(APIView):
+    authentication_classes = [JwtAuthentication,]
+    def post(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        serializer = MusicCategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK) 
+        return Response({
+            "error":serializer.errors
+            },
+            status=status.HTTP_400_BAD_REQUEST) 
+
+    def patch(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        category_id = request.data.get('category_id')
+        try:
+            category_obj = MusicCategory.objects.get(id=category_id)
+            serializer = MusicCategorySerializer(category_obj,data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data,status=status.HTTP_200_OK) 
+            return Response({
+                "error":serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST) 
+        except MusicCategory.DoesNotExist:
+            return Response({
+                'error':'Category not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+    def get(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        category_id = request.query_params.get('category_id')
+        try:
+            category_obj = MusicCategory.objects.get(id=category_id)
+            serializer = MusicCategorySerializer(category_obj)
+             
+            return Response({
+                "success":"Data Fetched",
+                "data":serializer.data
+                },
+                status=status.HTTP_200_OK) 
+        except MusicCategory.DoesNotExist:
+            return Response({
+                'error':'Category not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        category_id = request.query_params.get('category_id')
+        try:
+            category_obj = MusicCategory.objects.get(id=category_id)
+            category_obj.is_deleted = True
+            category_obj.save()
+            return Response({
+                "success":"Category has been deleted.",
+                },
+                status=status.HTTP_200_OK) 
+        except MusicCategory.DoesNotExist:
+            return Response({
+                'error':'Category not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+class GetMusicCategoryList(APIView):
+    authentication_classes = [JwtAuthentication,]
+    def get(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        category_obj = MusicCategory.objects.all()
+        serializer = MusicCategorySerializer(category_obj,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+    
+
+class ManageMusicFiles(APIView):
+    authentication_classes = [JwtAuthentication,]
+    def post(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        serializer = MusicFilesSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK) 
+        return Response({
+            "error":serializer.errors
+            },
+            status=status.HTTP_400_BAD_REQUEST) 
+
+    def patch(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        musicfile_id = request.data.get('musicfile_id')
+        try:
+            musicfile_obj = MusicFiles.objects.get(id=musicfile_id)
+            serializer = MusicFilesSerializer(musicfile_obj,data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data,status=status.HTTP_200_OK) 
+            return Response({
+                "error":serializer.errors
+                },
+                status=status.HTTP_400_BAD_REQUEST) 
+        except MusicFiles.DoesNotExist:
+            return Response({
+                'error':'MusicFile not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+    def get(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        musicfile_id = request.query_params.get('musicfile_id')
+        try:
+            musicfile_obj = MusicFiles.objects.get(id=musicfile_id)
+            serializer = MusicFilesSerializer(musicfile_obj)
+             
+            return Response({
+                "success":"Data Fetched",
+                "data":serializer.data
+                },
+                status=status.HTTP_200_OK) 
+        except MusicFiles.DoesNotExist:
+            return Response({
+                'error':'MusicFile not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+    def delete(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        musicfile_id = request.query_params.get('musicfile_id')
+        try:
+            musicfile_obj = MusicFiles.objects.get(id=musicfile_id)
+            musicfile_obj.is_deleted = True
+            musicfile_obj.save()
+            return Response({
+                "success":"MusicFile has been deleted.",
+                },
+                status=status.HTTP_200_OK) 
+        except MusicFiles.DoesNotExist:
+            return Response({
+                'error':'MusicFile not found'
+                },
+                status=status.HTTP_400_BAD_REQUEST)
+        
+class GetMusicFilesList(APIView):
+    authentication_classes = [JwtAuthentication,]
+    def get(self,request,*args,**kwargs):
+        user = request.user
+        if user.user_type != UserAccount.ADMIN:
+            return Response(
+                {
+                    "error":"User is not an admin"
+                },
+                400
+            )
+        musicfiles_obj = MusicFiles.objects.all()
+        serializer = MusicFilesSerializer(musicfiles_obj,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)

@@ -28,7 +28,7 @@ class MusicCategorySerializer(serializers.ModelSerializer):
         model = MusicCategory
         fields = '__all__'
 
-class MusicSerializer(serializers.ModelSerializer):
+class MusicFilesSerializer(serializers.ModelSerializer):
     class Meta:
         model = MusicFiles
         fields = '__all__'
