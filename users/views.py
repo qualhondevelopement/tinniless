@@ -118,7 +118,7 @@ class PasswordResetRequestView(APIView):
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         reset_link = f"\
-           http://localhost:3000/reset-password/{uid}/{token}/"
+           http://10.10.0.24:3014/reset-password/{uid}/{token}/"
         
         print("\n\n",reset_link,"\n\n")
         send_mail(
@@ -1329,7 +1329,7 @@ class AdminManageRetailer(APIView):
         status = request.data.get("status")
         
         lang=  request.data.get("lang")
-        if lang not in [i.language_name for i in Language.objects.all()]:
+        if lang and lang not in [i.language_name for i in Language.objects.all()]:
             return Response(
                 {
                     "error": "Language does't exist."

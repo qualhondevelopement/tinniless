@@ -91,17 +91,17 @@ class ManageSettings(APIView):
                 },
                 400
             )
-        settings_id = request.data.get('settings_id')
+        # settings_id = request.data.get('settings_id')
         try:
-            settings_obj = Settings.objects.get(id=settings_id)
+            settings_obj = Settings.objects.all().first()
             serializer = SettingsSerializer(settings_obj,data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data,status=status.HTTP_400_BAD_REQUEST) 
+                return Response(serializer.data,status=200) 
             return Response({
                 "error":serializer.errors
                 },
-                status=status.HTTP_400_BAD_REQUEST) 
+                status=status.HTTP_400_BAD_REQUEST)
         except Settings.DoesNotExist:
             return Response({
                 'error':'Setting not found'
@@ -117,9 +117,10 @@ class ManageSettings(APIView):
                 },
                 400
             )
-        settings_id = request.query_params.get('settings_id')
+        # settings_id = request.query_params.get('settings_id')
         try:
-            setting_obj = Settings.objects.get(id=settings_id)
+            # setting_obj = Settings.objects.get(id=settings_id)
+            setting_obj = Settings.objects.all().first()
             serializer = SettingsSerializer(setting_obj)
              
             return Response({
